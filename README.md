@@ -7,15 +7,19 @@ This Python script utilizes the yt_dlp library to extract information from a You
 Ensure you have the necessary Python libraries installed. You can install them using:
 
 '''
+
 pip install yt-dlp google.generativeai IPython streamlit pandas
 
 pip install -r requirements.txt
+
 '''
 # Usage
 Run the Streamlit app using the following command in your terminal:
 
 '''
+
 streamlit run yt.py
+
 '''
 * Input your GEMINI Secret Key in the provided text box.
 * Enter the YouTube URL of the video you want to summarize.
