@@ -13,7 +13,7 @@ pip install yt-dlp google.generativeai IPython streamlit pandas
 Run the Streamlit app using the following command in your terminal:
 
 '''
-streamlit run your_script_name.py
+streamlit run yt.py
 '''
 * Input your GEMINI Secret Key in the provided text box.
 * Enter the YouTube URL of the video you want to summarize.
