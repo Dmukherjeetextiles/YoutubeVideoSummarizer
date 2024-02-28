@@ -8,6 +8,7 @@ Ensure you have the necessary Python libraries installed. You can install them u
 
 '''
 pip install yt-dlp google.generativeai IPython streamlit pandas
+pip install -r requirements.txt
 '''
 # Usage
 Run the Streamlit app using the following command in your terminal:
