@@ -1,81 +1,97 @@
-import yt_dlp
-import google.generativeai as genai
-from IPython.display import Markdown
 import streamlit as st
-import pandas as pd
+import yt_dlp
+from youtube_transcript_api import YouTubeTranscriptApi
+import google.generativeai as genai
+import warnings
 
+# Ignore all warnings
+warnings.filterwarnings('ignore')
 
-
-
-def get_youtube_video_summary(youtube_url):
+def get_video_info(youtube_url):
     try:
-        # Create a YouTube object using yt_dlp
-        ydl = yt_dlp.YoutubeDL()
-        info_dict = ydl.extract_info(youtube_url, download=False)
-
-        # Extract relevant information
-        video_title = info_dict.get('title', 'No Title')
-        video_description = info_dict.get('description', 'No Description')
-
-        # Print or return the summary
-        video_summary = f'''Title: {video_title}\n
-                            Description: {video_description}'''
-        return video_summary
+        ydl_opts = {'quiet': True, 'skip_download': True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(youtube_url, download=False)
+            return {
+                'title': info_dict.get('title', 'No Title'),
+                'description': info_dict.get('description', 'No Description'),
+                'id': info_dict.get('id', None)
+            }
     except Exception as e:
-        print(f"An error occurred: {e}")
+        st.error(f"Error getting video info: {e}")
         return None
 
-# Example usage
-st.title("Youtube Video Summarizer")
-st.header("A Gemini Application by Debrup Mukherjee")
-GOOGLE_API_KEY = st.text_input('GEMINI Secret Key Here', '')
-# Configure the client library by providing your API key.
-genai.configure(api_key=GOOGLE_API_KEY)
-# Set up the model
-generation_config = {
-  "temperature": 0.8,
-  "top_p": 1,
-  "top_k": 1,
-  "max_output_tokens": 2048,
-}
+def get_transcript(video_id):
+    try:
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        return ' '.join([entry['text'] for entry in transcript_list])
+    except Exception as e:
+        st.error(f"Error fetching transcript: {e}")
+        return None
 
-safety_settings = [
-  {
-    "category": "HARM_CATEGORY_HARASSMENT",
-    "threshold": "BLOCK_ONLY_HIGH"
-  },
-  {
-    "category": "HARM_CATEGORY_HATE_SPEECH",
-    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-  },
-  {
-    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-  },
-  {
-    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-  },
-]
-youtube_url = st.text_input('Youtube URL Here', '')
-video_summary = get_youtube_video_summary(youtube_url)
-if st.button('Run'):
-    user_input = f'summarize the video script {video_summary}.' #@param {isTemplate: true}
-    # Call the model and print the response.
-    model = genai.GenerativeModel(model_name="gemini-1.0-pro",
-                                generation_config=generation_config,
-                                safety_settings=safety_settings)
-    chat = model.start_chat(history=[])
-    # Send the input file and the prompt to the model
-    response = chat.send_message(user_input)
-    # Save the response in a variable
-    result_parts = response.parts 
+def generate_summary(transcript, api_key):
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-2.0-flash-lite')
+    
+    prompt = f"""Please provide a comprehensive summary of the following video transcript:
+    
+    {transcript}
+    
+    Summary should include main points, key arguments, and important details. Keep it structured and concise."""
+    
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        st.error(f"Error generating summary: {e}")
+        return None
 
-    # Extract the text content from the result_parts
-    result = " ".join(part.text.strip() for part in result_parts)
+# Streamlit UI
+st.title("🎥 YouTube Video Summarizer")
+st.markdown("### Powered by Google Gemini")
 
-    if video_summary:
-        st.write('Summary: \n', result)
-        st.write('\n', video_summary)
-    else:
-        st.write("Failed to retrieve video summary.")
+with st.sidebar:
+    st.header("Configuration")
+    GOOGLE_API_KEY = st.text_input('Enter Gemini API Key:', type='password')
+    st.markdown("[Get Gemini API Key](https://aistudio.google.com/app/apikey)")
+
+youtube_url = st.text_input('Enter YouTube Video URL:', '', help="Paste any YouTube video URL here")
+
+if st.button('Generate Summary'):
+    if not GOOGLE_API_KEY:
+        st.warning('🔑 Please enter your Gemini API key!')
+        st.stop()
+    
+    if not youtube_url.startswith('https://'):
+        st.warning('⚠️ Please enter a valid YouTube URL')
+        st.stop()
+    
+    with st.spinner('📡 Fetching video information...'):
+        video_info = get_video_info(youtube_url)
+        if not video_info or not video_info['id']:
+            st.error('❌ Failed to retrieve video information')
+            st.stop()
+        
+        st.subheader(video_info['title'])
+        st.caption("Video ID: " + video_info['id'])
+    
+    with st.spinner('📝 Extracting transcript...'):
+        transcript = get_transcript(video_info['id'])
+        if not transcript:
+            st.error('❌ No transcript available for this video')
+            st.stop()
+    
+    with st.spinner('🧠 Generating summary with Gemini...'):
+        summary = generate_summary(transcript, GOOGLE_API_KEY)
+        if not summary:
+            st.stop()
+        
+        st.subheader("📄 Video Summary")
+        st.markdown(summary)
+        
+        with st.expander("View Transcript"):
+            st.write(transcript)
+        
+        with st.expander("View Video Details"):
+            st.write(f"**Title:** {video_info['title']}")
+            st.write(f"**Description:** {video_info['description']}")

@@ -1,5 +1,4 @@
-yt-dlp==2023.12.30
-google==3.0.0
-streamlit==1.31.0
-pandas==2.1.4
-IPython==8.22.1
+streamlit
+yt_dlp
+youtube_transcript_api
+google.generativeai
