@@ -2,7 +2,7 @@
 
 A simple web application built with Streamlit that allows you to generate concise summaries of YouTube videos using Google's Gemini AI model.
 
-[[Streamlit App](Screenshot youtube.png)](https://youtubevideosummarizergemini.streamlit.app/)
+[Streamlit App](Screenshot youtube.png)
 
 **Live demo:** [https://youtubevideosummarizergemini.streamlit.app/](https://youtubevideosummarizergemini.streamlit.app/)
 
